@@ -30,7 +30,7 @@
 // wifi sid and password (hardcoded for the moment)
 // @TODO: MAKE ssid and password NOT hardcoded?
 #ifndef APSSID
-#define APSSID "Saturno"
+#define APSSID "Mercurio"
 #define APPSK  "mamalorechia"
 #endif
 /* Set these to your desired credentials. */
