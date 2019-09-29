@@ -30,7 +30,7 @@
 // wifi sid and password (hardcoded for the moment)
 // @TODO: MAKE ssid and password NOT hardcoded?
 #ifndef APSSID
-#define APSSID "Mercurio"
+#define APSSID "Saturno"
 #define APPSK  "mamalorechia"
 #endif
 /* Set these to your desired credentials. */
@@ -100,6 +100,7 @@ void setup() {
   // wifi connection
   drawWifi();
   WiFi.begin(ssid, password);
+  Serial.println ( "Try connect to: " + String(ssid) );
   while (WiFi.status() != WL_CONNECTED ){
     delay(500);
     Serial.print(".");
@@ -110,6 +111,7 @@ void setup() {
   }
   IPAddress myIP = WiFi.localIP();
   tft.setCursor(20,130);
+  Serial.println ( "Connected to: " + String( ssid) );
   tft.print ( "Connected!" );
   tft.setCursor(20,140);
   tft.print ( myIP );
@@ -125,21 +127,24 @@ void setup() {
 void loop() {
   
   if(counter == 30) {//Get new data every 30 cycles (1 cycles = 60 sec)
+    Serial.println ( "Getting data from openweathermap.org" );
     counter = 0;
     getWeatherData();
   }else{
+    Serial.println ( "Display Weather data " );
     displayData();
     counter++;
-    Serial.println(counter); 
+    Serial.println( "Cycle number: " + String(counter) ); 
   } 
   
   //get current time
   timeS = getTime();
+  Serial.println ( "Getting current time: " + String(timeS) );
   //get current day
   day = getDay();
+  Serial.println ( "Getting current day: " + String (day) );
   //to define if we are in night or day (to display moon or sun)
   nightOrDay (timeS);
-  
 }
 // =======================================================================================
 
@@ -172,11 +177,13 @@ String getDay(){
 // sent request for data
 void getWeatherData(){ //client function to send/receive GET request data. 
   if (client.connect(servername, 80)) {  //starts client connection, checks for connection
+    Serial.println ( "Getting Weather from openweathermap.org" );
     client.println("GET /data/2.5/weather?id="+CityID+"&APPID="+APIKEY);
     client.println("Host: api.openweathermap.org");
     client.println("User-Agent: ArduinoWiFi/1.1");
     client.println("Connection: close");
     client.println();
+    Serial.println ( "Weather data correcly get from openweathermap.org" );
   } else {
     Serial.println("connection failed"); //error message if no client connect
     Serial.println();
@@ -195,10 +202,13 @@ void getWeatherData(){ //client function to send/receive GET request data.
   result.replace('[', ' ');
   result.replace(']', ' ');
   
+  Serial.println("Data collected from web: ");
   Serial.println(result);
 
   // format received data into a jsonArray.
   // to make this code working it has been becessary to install version 
+  
+  Serial.println( "Formatting data to json format..." );
   char jsonArray [result.length()+1];
   result.toCharArray(jsonArray,sizeof(jsonArray));
   jsonArray[result.length() + 1] = '\0';
@@ -207,7 +217,9 @@ void getWeatherData(){ //client function to send/receive GET request data.
   if (!root.success()){
     Serial.println("parseObject() failed");
   }
-  
+
+
+  Serial.println("Getting data from JSON");
   //TODO : try to understand why this double assignement is necessary
   String temperatureLOC = root["main"]["temp"];
   String weatherLOC = root["weather"]["main"];
@@ -222,6 +234,13 @@ void getWeatherData(){ //client function to send/receive GET request data.
   idString = idStringLOC;
   umidityPer = umidityPerLOC;
   windS = windLOC;
+
+  Serial.println ("Temperature: " + String(temperature) );
+  Serial.println ("Weather: " + String(weather) );
+  Serial.println ("Description: " + String(description) );
+  Serial.println ("idString: " + String(idString) );
+  Serial.println ("Umdity: " + String(umidityPer) );
+  Serial.println ("Wind: " + String(windS) );
 
   int length = temperature.length();
   if(length==5){
@@ -240,6 +259,7 @@ void getWeatherData(){ //client function to send/receive GET request data.
 //Une loop every 60 seconds
 
 void displayData(){
+  Serial.println ("...Displaying data on LCD..." );
   printGeneral("Montemurlo", timeS, day, weatherID, description, Fltemperature, umidityPer);
   delay (45000);
   //printWeather("Montemurlo", timeS, day, weatherID, description);
@@ -255,6 +275,7 @@ void displayData(){
 // =======================================================================================
 // Print Home page with all details
 void printGeneral(String city, String timeS, String day, int weatherID, String description, float temperature, String umidity){
+  Serial.println ("...Displaying Home Page on LCD..." );
   tft.fillScreen(BLACK);
 
   tft.setCursor(10,10);
@@ -296,6 +317,7 @@ void printGeneral(String city, String timeS, String day, int weatherID, String d
 // =======================================================================================
 // Print Weather with icon
 void printWeather(String city, String timeS, String day, int weatherID, String description) {
+  Serial.println ("...Displaying Weather on LCD..." );
   tft.fillScreen(BLACK);
 
   tft.setCursor(10,10);
@@ -319,7 +341,7 @@ void printWeather(String city, String timeS, String day, int weatherID, String d
 // =======================================================================================
 // Print temperature display
 void printTemperature(String city, String timeS, String day, float temperature){
-
+  Serial.println ("...Displaying Temperature on LCD..." );
   tft.fillScreen(BLACK);
 
   tft.setCursor(10,10);
@@ -344,7 +366,7 @@ void printTemperature(String city, String timeS, String day, float temperature){
 // =======================================================================================
 // Print umidity display
 void printUmidity(String city, String timeS, String day, String umidity){
-
+  Serial.println ("...Displaying Humidity on LCD..." );
   tft.fillScreen(BLACK);
 
   tft.setCursor(10,10);
@@ -369,7 +391,8 @@ void printUmidity(String city, String timeS, String day, String umidity){
 // =======================================================================================
 // Print wind display
 void printWind(String city, String timeS, String day, String wind){
-
+  Serial.println ("...Displaying  Wind on LCD..." );
+  
   tft.fillScreen(BLACK);
 
   tft.setCursor(10,10);
@@ -394,6 +417,7 @@ void printWind(String city, String timeS, String day, String wind){
 // =======================================================================================
 // Print WeatherIcon based on id
 void printWeatherIcon(int id) {
+ Serial.println ("...Printing WeatherIcon on LCD with id: " + String(id) );
  switch(id) {
   case 800: drawClearWeather(); break;
   case 801: drawFewClouds(); break;
@@ -480,6 +504,7 @@ void clearScreen() {
 }
 
 void drawClearWeather(){
+  Serial.println ("...Printing ClearWeather on LCD");
   if(night){
     drawTheMoon();
   }else{
@@ -488,6 +513,7 @@ void drawClearWeather(){
 }
 
 void drawFewClouds(){
+  Serial.println ("...Printing FewClouds on LCD");
   if(night){
     drawCloudAndTheMoon();
   }else{
@@ -496,31 +522,38 @@ void drawFewClouds(){
 }
 
 void drawTheSun(){
+  Serial.println ("...Printing TheSun on LCD");
   tft.fillCircle(64,80,26,YELLOW);
 }
 
 void drawTheFullMoon(){
+  Serial.println ("...Printing FullMoon on LCD");
   tft.fillCircle(64,80,26,GREY);
 }
 
 void drawTheMoon(){
+  Serial.println ("...Printing TheMoon on LCD");
   tft.fillCircle(64,80,26,GREY);
   tft.fillCircle(75,73,26,BLACK);
 }
 
 void drawCloud(){
+  Serial.println ("...Printing Cloud on LCD");
   tft.drawBitmap(0,35,cloud,128,90,GREY);
 }
 
 void drawThermometer(){
+  Serial.println ("...Printing Thermometer on LCD");
   tft.drawBitmap(0,40,thermometer,128,90,WHITE);
 }
 
 void drawUmidity(){
+  Serial.println ("...Printing Humidityon LCD");
   tft.drawBitmap(0,40,umidity,128,90,BLUE);
 }
 
 void drawWifi(){
+  Serial.println ("...Printing Wifi LCD");
   tft.drawBitmap(0,20,wifi,128,90  ,BLUE);
 }
 
@@ -531,6 +564,7 @@ void drawCloudWithSun(){
 }
 
 void drawLightRainWithSunOrMoon(){
+  Serial.println ("...Printing RainWithSunOrMoon on LCD");
   if(night){  
     drawCloudTheMoonAndRain();
   }else{
@@ -539,6 +573,7 @@ void drawLightRainWithSunOrMoon(){
 }
 
 void drawLightRain(){
+  Serial.println ("...Printing LightRain on LCD");
   tft.drawBitmap(0,35,cloud,128,90,GREY);
   tft.fillRoundRect(50, 105, 3, 13, 1, BLUE);
   tft.fillRoundRect(65, 105, 3, 13, 1, BLUE);
@@ -546,6 +581,7 @@ void drawLightRain(){
 }
 
 void drawModerateRain(){
+  Serial.println ("...Printing ModerateRain on LCD");
   tft.drawBitmap(0,35,cloud,128,90,GREY);
   tft.fillRoundRect(50, 105, 3, 15, 1, BLUE);
   tft.fillRoundRect(57, 102, 3, 15, 1, BLUE);
@@ -555,6 +591,7 @@ void drawModerateRain(){
 }
 
 void drawHeavyRain(){
+  Serial.println ("...Printing HeavyRain on LCD");
   tft.drawBitmap(0,35,cloud,128,90,GREY);
   tft.fillRoundRect(43, 102, 3, 15, 1, BLUE);
   tft.fillRoundRect(50, 105, 3, 15, 1, BLUE);
@@ -566,6 +603,7 @@ void drawHeavyRain(){
 }
 
 void drawThunderstorm(){
+  Serial.println ("...Printing Thunderstorm on LCD");
   tft.drawBitmap(0,40,thunder,128,90,YELLOW);
   tft.drawBitmap(0,35,cloud,128,90,GREY);
   tft.fillRoundRect(48, 102, 3, 15, 1, BLUE);
@@ -575,6 +613,7 @@ void drawThunderstorm(){
 }
 
 void drawLightSnowfall(){
+  Serial.println ("...Printing LightSnowfall on LCD");
   tft.drawBitmap(0,30,cloud,128,90,GREY);
   tft.fillCircle(50, 100, 3, GREY);
   tft.fillCircle(65, 103, 3, GREY);
@@ -582,6 +621,7 @@ void drawLightSnowfall(){
 }
 
 void drawModerateSnowfall(){
+  Serial.println ("...Printing ModerateSnowfall on LCD");
   tft.drawBitmap(0,35,cloud,128,90,GREY);
   tft.fillCircle(50, 105, 3, GREY);
   tft.fillCircle(50, 115, 3, GREY);
@@ -592,6 +632,7 @@ void drawModerateSnowfall(){
 }
 
 void drawHeavySnowfall(){
+  Serial.println ("...Printing HeavySnowfall on LCD");
   tft.drawBitmap(0,35,cloud,128,90,GREY);
   tft.fillCircle(40, 105, 3, GREY);
   tft.fillCircle(52, 105, 3, GREY);
@@ -604,6 +645,7 @@ void drawHeavySnowfall(){
 }
 
 void drawCloudSunAndRain(){
+  Serial.println ("...Printing CloudSunAndRain on LCD");
   tft.fillCircle(73,70,20,YELLOW);
   tft.drawBitmap(0,32,cloud,128,90,BLACK);
   tft.drawBitmap(0,35,cloud,128,90,GREY);
@@ -613,6 +655,7 @@ void drawCloudSunAndRain(){
 }
 
 void drawCloudAndTheMoon(){
+  Serial.println ("...Printing CloudAndTheMoon on LCD");
   tft.fillCircle(94,60,18,GREY);
   tft.fillCircle(105,53,18,BLACK);
   tft.drawBitmap(0,32,cloud,128,90,BLACK);
@@ -620,6 +663,7 @@ void drawCloudAndTheMoon(){
 }
 
 void drawCloudTheMoonAndRain(){
+  Serial.println ("...Printing CloudTheMoonAndRain on LCD");
   tft.fillCircle(94,60,18,GREY);
   tft.fillCircle(105,53,18,BLACK);
   tft.drawBitmap(0,32,cloud,128,90,BLACK);
@@ -630,10 +674,12 @@ void drawCloudTheMoonAndRain(){
 }
 
 void drawWind(){  
+  Serial.println ("...Printing Wind on LCD");
   tft.drawBitmap(0,35,wind,128,90,GREY);   
 }
 
 void drawFog()  {
+  Serial.println ("...Printing Fog on LCD");
   tft.fillRoundRect(45, 60, 40, 4, 1, GREY);
   tft.fillRoundRect(40, 70, 50, 4, 1, GREY);
   tft.fillRoundRect(35, 80, 60, 4, 1, GREY);
@@ -642,5 +688,6 @@ void drawFog()  {
 }
 
 void clearIcon(){
+  Serial.println ("...clearIcon for LCD");
   tft.fillRect(0,40,128,100,BLACK);
 }
