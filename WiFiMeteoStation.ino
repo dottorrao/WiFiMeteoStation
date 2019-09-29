@@ -4,6 +4,7 @@
 // ----------------------------------------------------------------------------------------
 
 //Used Library
+#include <FS.h>                               //this needs to be first, or it all crashes and burns...
 #include <NTPClient.h>                        // Date/Time manager 
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>                          // Library to send and receive UDP messages
@@ -11,6 +12,7 @@
 #include <ArduinoJson.h>                      // Arduino Json to parse reauest into JSON object. Installed version 5.13, last version is not compatible.
 #include <Adafruit_ST7735.h>                  // LCD driver
 #include <Adafruit_GFX.h>                     // LCD graphical driver
+#include <WiFiManager.h>                      // https://github.com/tzapu/WiFiManager
 
 // ----------------------------------------------------------------------------------------
 
@@ -29,13 +31,14 @@
 
 // wifi sid and password (hardcoded for the moment)
 // @TODO: MAKE ssid and password NOT hardcoded?
-#ifndef APSSID
-#define APSSID "Saturno"
-#define APPSK  "mamalorechia"
-#endif
+
+//#ifndef APSSID
+//#define APSSID "Saturno"
+//#define APPSK  "mamalorechia"
+//#endif
 /* Set these to your desired credentials. */
-char *ssid = APSSID;
-char *password = APPSK;
+//char *ssid = APSSID;
+//char *password = APPSK;
 
 // ----------------------------------------------------------------------------------------
 
@@ -88,6 +91,15 @@ extern  unsigned char  wifi[];
 // @TODO set the PIN as variable
 Adafruit_ST7735 tft = Adafruit_ST7735(15, 12, 13, 14, 0);   
 
+//flag for saving data
+bool shouldSaveConfig = false;
+
+//callback notifying us of the need to save config
+void saveConfigCallback () {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
+
 // =======================================================================================
 // S E T U P
 // =======================================================================================
@@ -97,35 +109,77 @@ void setup() {
   // LCD: initialize a ST7735S chip, green tab
   tft.initR(INITR_GREENTAB);    
   tft.fillScreen(BLACK);    
-  // wifi connection
+  
+  // WiFiManager
+  // Local intialization. Once its business is done, there is no need to keep it around
+  WiFiManager wifiManager;
+
+  // Uncomment and run it once, if you want to erase all the stored information
+  wifiManager.resetSettings();
+
+  //set config save notify callback
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+
+  // set custom ip for portal
+  //wifiManager.setAPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
+
   drawWifi();
-  WiFi.begin(ssid, password);
-  Serial.println ( "Try connect to: " + String(ssid) );
-  while (WiFi.status() != WL_CONNECTED ){
-    delay(500);
-    Serial.print(".");
-    tft.setCursor(20,110);
-    tft.print ( "Try connect to: " );
-    tft.setCursor(20,120);
-    tft.print ( ssid );
-  }
-  IPAddress myIP = WiFi.localIP();
-  tft.setCursor(20,130);
-  Serial.println ( "Connected to: " + String( ssid) );
-  tft.print ( "Connected!" );
-  tft.setCursor(20,140);
-  tft.print ( myIP );
+  
+  tft.setCursor(1,110);
+  tft.println ( "To provide credential");
+  tft.println ( "use accesspoint");
+  tft.setTextColor(GREEN);
+  tft.println ( "WiFiMeteoStationAP"); 
+  
+  // fetches ssid and pass from eeprom and tries to connect
+  // if it does not connect it starts an access point with the specified name
+  // here  "AutoConnectAP"
+  // and goes into a blocking loop awaiting configuration
+  wifiManager.autoConnect("WiFiMeteoStationAP");
+  // or use this for auto generated name ESP + ChipID
+  //wifiManager.autoConnect();
+  
+  //set minimu quality of signal so it ignores AP's under that quality
+  //defaults to 8%
+  //wifiManager.setMinimumSignalQuality();
+
+  //sets timeout until configuration portal gets turned off
+  //useful to make it all retry or go to sleep
+  //in seconds
+  //wifiManager.setTimeout(120);
+
+  // if you get here you have connected to the WiFi
+  // Serial.println("Connected.");
+  
+  // wifi connection
+  
+  //WiFi.begin(ssid, password);
+  //Serial.println ( "Try connect to: " + String(ssid) );
+  //while (WiFi.status() != WL_CONNECTED ){
+  //  delay(500);
+  //  Serial.print(".");
+  //  tft.setCursor(20,110);
+  //  tft.print ( "Try connect to: " );
+  //  tft.setCursor(20,120);
+  //  tft.print ( ssid );
+  //}
+  //IPAddress myIP = WiFi.localIP();
+  //tft.setCursor(20,130);
+  //tft.print ( "To provide credential use AP WiFiMeteoStationAP" );
+  //tft.setCursor(20,140);
+  //tft.print ( myIP );
   // client to get date and time
   // @TODO: implement better this step with https://github.com/scanlime/esp8266-Arduino/blob/master/tests/Time/Time.ino
   timeClient.begin();
   delay (2000);
+  
 }
 
 // =======================================================================================
 // L O O P
 // =======================================================================================
 void loop() {
-  
+
   if(counter == 30) {//Get new data every 30 cycles (1 cycles = 60 sec)
     Serial.println ( "Getting data from openweathermap.org" );
     counter = 0;
