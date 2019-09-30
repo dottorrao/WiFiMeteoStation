@@ -104,7 +104,7 @@ const int buttonResetPin = 4;
 int buttonReset = 0;
 
 //REFRESH DATA
-boolean displayDataLCD = true;
+boolean firstRun = true;
 unsigned long startMillis;
 unsigned long currentMillis;
 const unsigned long period = 30 * 60 * 1000; // mm * ss * millisecond
@@ -133,7 +133,7 @@ void setup() {
   WiFiManager wifiManager;
 
   // Uncomment and run it once, if you want to erase all the stored information
-  //wifiManager.resetSettings();
+  wifiManager.resetSettings();
 
   //set config save notify callback
   wifiManager.setSaveConfigCallback(saveConfigCallback);
@@ -197,9 +197,9 @@ void setup() {
 // =======================================================================================
 void loop() {
 
-
   currentMillis = millis();
-  if (currentMillis - startMillis >= period ) {
+  if ( (currentMillis - startMillis >= period) or (firstRun) ) {
+    firstRun = false;
     startMillis = currentMillis;
     //get current time
     timeS = getTime();
