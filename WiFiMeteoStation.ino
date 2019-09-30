@@ -73,9 +73,8 @@ String    description = "";
 String    idString = "";
 String    umidityPer = "";
 float     Fltemperature = 0;
-int       counter = 30;
+int       counter = 180000;
 String    windS = "";
-
 
 // ----------------------------------------------------------------------------------------
 // images used
@@ -100,11 +99,30 @@ void saveConfigCallback () {
   shouldSaveConfig = true;
 }
 
+//BUTTON
+const int buttonResetPin = 4; 
+int buttonReset = 0;
+
+//REFRESH DATA
+boolean displayDataLCD = true;
+unsigned long startMillis;
+unsigned long currentMillis;
+const unsigned long period = 30 * 60 * 1000; // mm * ss * millisecond
+
+
 // =======================================================================================
 // S E T U P
 // =======================================================================================
 void setup() {
+  
+  
   Serial.begin(9600);
+
+  //start of couting of millisecond from start of sketch
+  startMillis = millis();  //initial start time
+  
+  //Button reset init
+  pinMode(buttonResetPin, INPUT);
 
   // LCD: initialize a ST7735S chip, green tab
   tft.initR(INITR_GREENTAB);    
@@ -115,7 +133,7 @@ void setup() {
   WiFiManager wifiManager;
 
   // Uncomment and run it once, if you want to erase all the stored information
-  wifiManager.resetSettings();
+  //wifiManager.resetSettings();
 
   //set config save notify callback
   wifiManager.setSaveConfigCallback(saveConfigCallback);
@@ -172,7 +190,6 @@ void setup() {
   // @TODO: implement better this step with https://github.com/scanlime/esp8266-Arduino/blob/master/tests/Time/Time.ino
   timeClient.begin();
   delay (2000);
-  
 }
 
 // =======================================================================================
@@ -180,25 +197,47 @@ void setup() {
 // =======================================================================================
 void loop() {
 
-  if(counter == 30) {//Get new data every 30 cycles (1 cycles = 60 sec)
+
+  currentMillis = millis();
+  if (currentMillis - startMillis >= period ) {
+    startMillis = currentMillis;
+    //get current time
+    timeS = getTime();
+    Serial.println ( "Getting current time: " + String(timeS) );
+    //get current day
+    day = getDay();
+    Serial.println ( "Getting current day: " + String (day) );
+    //to define if we are in night or day (to display moon or sun)
+    nightOrDay (timeS);
+    Serial.println ( "Getting data from openweathermap.org" );
+    getWeatherData();
+    Serial.println ( "Display Weather data " );
+    tft.fillScreen(BLACK);
+    displayData();
+  } else {
+    buttonReset = digitalRead(buttonResetPin);
+    //check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+    if (buttonReset == HIGH) {
+      Serial.println ( "!!! RESET OF THE CONNECTION VALUES !!! " );
+      delay(100);
+    }   
+  } 
+
+  /*
+  if(counter == 180000) {//Get new data every 60 cycles (1 cycles = 60 sec)
     Serial.println ( "Getting data from openweathermap.org" );
     counter = 0;
     getWeatherData();
   }else{
     Serial.println ( "Display Weather data " );
+    tft.fillScreen(BLACK);
     displayData();
     counter++;
-    Serial.println( "Cycle number: " + String(counter) ); 
+    Serial.println( "Cycle number: " + String(counter) );
+    delay (180000); 
   } 
+  */
   
-  //get current time
-  timeS = getTime();
-  Serial.println ( "Getting current time: " + String(timeS) );
-  //get current day
-  day = getDay();
-  Serial.println ( "Getting current day: " + String (day) );
-  //to define if we are in night or day (to display moon or sun)
-  nightOrDay (timeS);
 }
 // =======================================================================================
 
@@ -315,57 +354,57 @@ void getWeatherData(){ //client function to send/receive GET request data.
 void displayData(){
   Serial.println ("...Displaying data on LCD..." );
   printGeneral("Montemurlo", timeS, day, weatherID, description, Fltemperature, umidityPer);
-  delay (45000);
   //printWeather("Montemurlo", timeS, day, weatherID, description);
   //delay (pause);
-  printTemperature("Montemurlo", timeS, day, Fltemperature);
-  delay (5000);
-  printUmidity("Montemurlo", timeS, day, umidityPer);
-  delay (5000);
-  printWind("Montemurlo", timeS, day, windS);
-  delay (5000);
+  //printTemperature("Montemurlo", timeS, day, Fltemperature);
+  //delay (5000);
+  //printUmidity("Montemurlo", timeS, day, umidityPer);
+  //delay (5000);
+  //printWind("Montemurlo", timeS, day, windS);
+  //delay (5000);
 }
 
 // =======================================================================================
 // Print Home page with all details
 void printGeneral(String city, String timeS, String day, int weatherID, String description, float temperature, String umidity){
   Serial.println ("...Displaying Home Page on LCD..." );
-  tft.fillScreen(BLACK);
-
-  tft.setCursor(10,10);
+  
+  tft.setCursor(2,10);
   tft.setTextColor(RED);
   tft.setTextSize(1);
   tft.print(city);
 
-  tft.setCursor(10,20);
-  tft.setTextColor(WHITE);
+  tft.setCursor(1,20);
+  tft.setTextColor(GREEN);
   tft.setTextSize(2);
-  tft.print(timeS + ' ' + day);
+  //tft.print(timeS + ' ' + day);
+  tft.print(description);
 
   printWeatherIcon(weatherID);
 
-  tft.setCursor(2,112);
-  tft.setTextColor(GREEN);
-  tft.setTextSize(1);
-  tft.print(description);
-  tft.setCursor(2,122);
-  tft.setTextColor(WHITE);
-  tft.print("Temperature:");
+  //tft.setCursor(2,112);
+  //tft.setTextColor(GREEN);
+  //tft.setTextSize(1);
+  //tft.print(description);
+  tft.setCursor(5,120);
+  //tft.setTextColor(WHITE);
+  //tft.print("Temperature:");
+  tft.setTextSize(2);
   tft.setTextColor(GREEN);
   tft.print(temperature);
   tft.print("'C");
-  tft.setCursor(2,132);
-  tft.setTextColor(WHITE);
-  tft.print("Umidity:");
-  tft.setTextColor(GREEN);
+  tft.setCursor(5,140);
+  //tft.setTextColor(WHITE);
+  //tft.print("Umidity:");
+  //tft.setTextColor(GREEN);
   tft.print(umidity);
   tft.print("%");
-  tft.setCursor(2,142);
-  tft.setTextColor(WHITE);
-  tft.print("Wind:");
-  tft.setTextColor(GREEN);
-  tft.print(windS);
-  tft.print("m/s");
+  //tft.setCursor(5,162);
+  //tft.setTextColor(WHITE);
+  //tft.print("Wind:");
+  //tft.setTextColor(GREEN);
+  //tft.print(windS);
+  //tft.print("m/s");
 }
 
 // =======================================================================================
@@ -541,8 +580,6 @@ void printWeatherIcon(int id) {
 void nightOrDay(String timeS) {
   timeS = timeS.substring(0,2);
   int time = timeS.toInt();
-  Serial.print ( "====" );
-  Serial.print ( time );
   if(time > 21 ||  time<7) {
  night = true;
   }else {
