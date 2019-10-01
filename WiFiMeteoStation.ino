@@ -168,25 +168,6 @@ void setup() {
   // if you get here you have connected to the WiFi
   // Serial.println("Connected.");
   
-  // wifi connection
-  
-  //WiFi.begin(ssid, password);
-  //Serial.println ( "Try connect to: " + String(ssid) );
-  //while (WiFi.status() != WL_CONNECTED ){
-  //  delay(500);
-  //  Serial.print(".");
-  //  tft.setCursor(20,110);
-  //  tft.print ( "Try connect to: " );
-  //  tft.setCursor(20,120);
-  //  tft.print ( ssid );
-  //}
-  //IPAddress myIP = WiFi.localIP();
-  //tft.setCursor(20,130);
-  //tft.print ( "To provide credential use AP WiFiMeteoStationAP" );
-  //tft.setCursor(20,140);
-  //tft.print ( myIP );
-  // client to get date and time
-  // @TODO: implement better this step with https://github.com/scanlime/esp8266-Arduino/blob/master/tests/Time/Time.ino
   timeClient.begin();
   delay (2000);
 }
@@ -220,23 +201,7 @@ void loop() {
       displayDetails();
       firstRun = true; //to display again home page
     }   
-  } 
-
-  /*
-  if(counter == 180000) {//Get new data every 60 cycles (1 cycles = 60 sec)
-    Serial.println ( "Getting data from openweathermap.org" );
-    counter = 0;
-    getWeatherData();
-  }else{
-    Serial.println ( "Display Weather data " );
-    tft.fillScreen(BLACK);
-    displayData();
-    counter++;
-    Serial.println( "Cycle number: " + String(counter) );
-    delay (180000); 
-  } 
-  */
-  
+  }
 }
 // =======================================================================================
 
