@@ -109,6 +109,9 @@ unsigned long startMillis;
 unsigned long currentMillis;
 const unsigned long period = 30 * 60 * 1000; // mm * ss * millisecond
 
+// WiFiManager
+// Local intialization. Once its business is done, there is no need to keep it around
+WiFiManager wifiManager;
 
 // =======================================================================================
 // S E T U P
@@ -128,12 +131,8 @@ void setup() {
   tft.initR(INITR_GREENTAB);    
   tft.fillScreen(BLACK);    
   
-  // WiFiManager
-  // Local intialization. Once its business is done, there is no need to keep it around
-  WiFiManager wifiManager;
-
   // Uncomment and run it once, if you want to erase all the stored information
-  wifiManager.resetSettings();
+  //wifiManager.resetSettings();
 
   //set config save notify callback
   wifiManager.setSaveConfigCallback(saveConfigCallback);
@@ -212,14 +211,14 @@ void loop() {
     Serial.println ( "Getting data from openweathermap.org" );
     getWeatherData();
     Serial.println ( "Display Weather data " );
-    tft.fillScreen(BLACK);
-    displayData();
+    displayHomePage();
   } else {
     buttonReset = digitalRead(buttonResetPin);
     //check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+    delay(100);
     if (buttonReset == HIGH) {
-      Serial.println ( "!!! RESET OF THE CONNECTION VALUES !!! " );
-      delay(100);
+      displayDetails();
+      firstRun = true; //to display again home page
     }   
   } 
 
@@ -351,24 +350,30 @@ void getWeatherData(){ //client function to send/receive GET request data.
 //Display data on the LCD screen
 //Une loop every 60 seconds
 
-void displayData(){
+void displayHomePage(){
   Serial.println ("...Displaying data on LCD..." );
   printGeneral("Montemurlo", timeS, day, weatherID, description, Fltemperature, umidityPer);
+}
+
+void displayDetails(){
+  Serial.println ("...Displaying details on LCD..." );
   //printWeather("Montemurlo", timeS, day, weatherID, description);
-  //delay (pause);
-  //printTemperature("Montemurlo", timeS, day, Fltemperature);
-  //delay (5000);
-  //printUmidity("Montemurlo", timeS, day, umidityPer);
-  //delay (5000);
-  //printWind("Montemurlo", timeS, day, windS);
-  //delay (5000);
+  delay (5000);
+  printTemperature("Montemurlo", timeS, day, Fltemperature);
+  delay (5000);
+  printUmidity("Montemurlo", timeS, day, umidityPer);
+  delay (5000);
+  printWind("Montemurlo", timeS, day, windS);
+  delay (5000);
 }
 
 // =======================================================================================
 // Print Home page with all details
 void printGeneral(String city, String timeS, String day, int weatherID, String description, float temperature, String umidity){
   Serial.println ("...Displaying Home Page on LCD..." );
-  
+
+  tft.fillScreen(BLACK);
+
   tft.setCursor(2,10);
   tft.setTextColor(RED);
   tft.setTextSize(1);
