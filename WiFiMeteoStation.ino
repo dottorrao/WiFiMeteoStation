@@ -13,6 +13,7 @@
 #include <Adafruit_ST7735.h>                  // LCD driver
 #include <Adafruit_GFX.h>                     // LCD graphical driver
 #include <WiFiManager.h>                      // https://github.com/tzapu/WiFiManager
+#include <math.h>
 
 // ----------------------------------------------------------------------------------------
 
@@ -31,14 +32,6 @@
 
 // wifi sid and password (hardcoded for the moment)
 // @TODO: MAKE ssid and password NOT hardcoded?
-
-//#ifndef APSSID
-//#define APSSID "Saturno"
-//#define APPSK  "mamalorechia"
-//#endif
-/* Set these to your desired credentials. */
-//char *ssid = APSSID;
-//char *password = APPSK;
 
 // ----------------------------------------------------------------------------------------
 
@@ -73,7 +66,7 @@ String    description = "";
 String    idString = "";
 String    umidityPer = "";
 float     Fltemperature = 0;
-int       counter = 180000;
+int       InTemperature = 0;
 String    windS = "";
 
 // ----------------------------------------------------------------------------------------
@@ -100,8 +93,8 @@ void saveConfigCallback () {
 }
 
 //BUTTON
-const int buttonResetPin = 4; 
-int buttonReset = 0;
+const int buttonDetailPin = 4; 
+int buttonDetail = 0;
 
 //REFRESH DATA
 boolean firstRun = true;
@@ -125,8 +118,8 @@ void setup() {
   startMillis = millis();  //initial start time
   
   //Button reset init
-  pinMode(buttonResetPin, INPUT);
-
+  pinMode(buttonDetailPin, INPUT); //_PULLUP);
+  
   // LCD: initialize a ST7735S chip, green tab
   tft.initR(INITR_GREENTAB);    
   tft.fillScreen(BLACK);    
@@ -138,13 +131,13 @@ void setup() {
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
   // set custom ip for portal
-  //wifiManager.setAPConfig(IPAddress(10,0,1,1), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
+  //wifiManager.setAPConfig(IPAddress(10,0,1,1));
 
   drawWifi();
   
   tft.setCursor(1,110);
-  tft.println ( "To provide credential");
-  tft.println ( "use accesspoint");
+  tft.println ("To provide credential");
+  tft.println ("use accesspoint");
   tft.setTextColor(GREEN);
   tft.println ( "WiFiMeteoStationAP"); 
   
@@ -193,16 +186,18 @@ void loop() {
     getWeatherData();
     Serial.println ( "Display Weather data " );
     displayHomePage();
-  } else {
-    buttonReset = digitalRead(buttonResetPin);
-    //check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+  }else{
+    buttonDetail = digitalRead (buttonDetailPin);
+    //Serial.print ( buttonDetail );
     delay(100);
-    if (buttonReset == HIGH) {
+    if ( buttonDetail == 0 ) {
+      //Serial.print ( buttonDetail );
       displayDetails();
-      firstRun = true; //to display again home page
-    }   
-  }
+      firstRun = true;
+    }
+  }   
 }
+
 // =======================================================================================
 
 // get current date
@@ -306,6 +301,7 @@ void getWeatherData(){ //client function to send/receive GET request data.
 
   Fltemperature = temperature.toFloat();
   Fltemperature = Fltemperature - 273,15;
+  InTemperature = round(Fltemperature);
   
   weatherID = idString.toInt();
 }
@@ -317,14 +313,14 @@ void getWeatherData(){ //client function to send/receive GET request data.
 
 void displayHomePage(){
   Serial.println ("...Displaying data on LCD..." );
-  printGeneral("Montemurlo", timeS, day, weatherID, description, Fltemperature, umidityPer);
+  printGeneral("Montemurlo", timeS, day, weatherID, description, InTemperature, umidityPer);
 }
 
 void displayDetails(){
   Serial.println ("...Displaying details on LCD..." );
   //printWeather("Montemurlo", timeS, day, weatherID, description);
   delay (5000);
-  printTemperature("Montemurlo", timeS, day, Fltemperature);
+  printTemperature("Montemurlo", timeS, day, InTemperature);
   delay (5000);
   printUmidity("Montemurlo", timeS, day, umidityPer);
   delay (5000);
@@ -334,7 +330,7 @@ void displayDetails(){
 
 // =======================================================================================
 // Print Home page with all details
-void printGeneral(String city, String timeS, String day, int weatherID, String description, float temperature, String umidity){
+void printGeneral(String city, String timeS, String day, int weatherID, String description, int temperature, String umidity){
   Serial.println ("...Displaying Home Page on LCD..." );
 
   tft.fillScreen(BLACK);
@@ -343,38 +339,19 @@ void printGeneral(String city, String timeS, String day, int weatherID, String d
   tft.setTextColor(RED);
   tft.setTextSize(1);
   tft.print(city);
-
-  tft.setCursor(1,20);
+  tft.setCursor(2,20);
   tft.setTextColor(GREEN);
-  tft.setTextSize(2);
-  //tft.print(timeS + ' ' + day);
   tft.print(description);
-
   printWeatherIcon(weatherID);
-
-  //tft.setCursor(2,112);
-  //tft.setTextColor(GREEN);
-  //tft.setTextSize(1);
-  //tft.print(description);
   tft.setCursor(5,120);
-  //tft.setTextColor(WHITE);
-  //tft.print("Temperature:");
   tft.setTextSize(2);
-  tft.setTextColor(GREEN);
+  tft.setTextColor(BLUE);
   tft.print(temperature);
   tft.print("'C");
-  tft.setCursor(5,140);
-  //tft.setTextColor(WHITE);
-  //tft.print("Umidity:");
-  //tft.setTextColor(GREEN);
+  tft.setCursor(85,120);
   tft.print(umidity);
   tft.print("%");
-  //tft.setCursor(5,162);
-  //tft.setTextColor(WHITE);
-  //tft.print("Wind:");
-  //tft.setTextColor(GREEN);
-  //tft.print(windS);
-  //tft.print("m/s");
+
 }
 
 // =======================================================================================
@@ -383,15 +360,13 @@ void printWeather(String city, String timeS, String day, int weatherID, String d
   Serial.println ("...Displaying Weather on LCD..." );
   tft.fillScreen(BLACK);
 
-  tft.setCursor(10,10);
+  tft.setCursor(2,10);
   tft.setTextColor(RED);
   tft.setTextSize(1);
   tft.print(city);
-
-  tft.setCursor(10,20);
-  tft.setTextColor(WHITE);
-  tft.setTextSize(2);
-  tft.print(timeS + ' ' + day);
+  tft.setCursor(2,20);
+  tft.setTextColor(GREEN);
+  tft.print(description);
 
   printWeatherIcon(weatherID);
 
@@ -407,15 +382,13 @@ void printTemperature(String city, String timeS, String day, float temperature){
   Serial.println ("...Displaying Temperature on LCD..." );
   tft.fillScreen(BLACK);
 
-  tft.setCursor(10,10);
+  tft.setCursor(2,10);
   tft.setTextColor(RED);
   tft.setTextSize(1);
   tft.print(city);
-
-  tft.setCursor(10,20);
-  tft.setTextColor(WHITE);
-  tft.setTextSize(2);
-  tft.print(timeS + ' ' + day);
+  tft.setCursor(2,20);
+  tft.setTextColor(GREEN);
+  tft.print(description);
 
   drawThermometer();
 
@@ -432,15 +405,13 @@ void printUmidity(String city, String timeS, String day, String umidity){
   Serial.println ("...Displaying Humidity on LCD..." );
   tft.fillScreen(BLACK);
 
-  tft.setCursor(10,10);
+  tft.setCursor(2,10);
   tft.setTextColor(RED);
   tft.setTextSize(1);
   tft.print(city);
-
-  tft.setCursor(10,20);
-  tft.setTextColor(WHITE);
-  tft.setTextSize(2);
-  tft.print(timeS + ' ' + day);
+  tft.setCursor(2,20);
+  tft.setTextColor(GREEN);
+  tft.print(description);
 
   drawUmidity();
 
@@ -455,18 +426,15 @@ void printUmidity(String city, String timeS, String day, String umidity){
 // Print wind display
 void printWind(String city, String timeS, String day, String wind){
   Serial.println ("...Displaying  Wind on LCD..." );
-  
   tft.fillScreen(BLACK);
 
-  tft.setCursor(10,10);
+  tft.setCursor(2,10);
   tft.setTextColor(RED);
   tft.setTextSize(1);
   tft.print(city);
-
-  tft.setCursor(10,20);
-  tft.setTextColor(WHITE);
-  tft.setTextSize(2);
-  tft.print(timeS + ' ' + day);
+  tft.setCursor(2,20);
+  tft.setTextColor(GREEN);
+  tft.print(description);
 
   drawWind();
 
