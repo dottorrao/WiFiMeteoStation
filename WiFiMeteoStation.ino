@@ -309,6 +309,8 @@ void getWeatherData(){ //client function to send/receive GET request data.
   Serial.println ("idString: " + String(idString) );
   Serial.println ("Umdity: " + String(umidityPer) );
   Serial.println ("Wind: " + String(windS) );
+  Serial.println ("Temp Min: " + String(tempMin) );
+  Serial.println ("Temp Max: " + String(tempMax) );
 
   int length = temperature.length();
   if(length==5){
@@ -338,7 +340,7 @@ void getWeatherData(){ //client function to send/receive GET request data.
 
 void displayHomePage(){
   Serial.println ("...Displaying data on LCD..." );
-  printGeneral("Montemurlo", timeS, day, weatherID, description, InTemperature, umidityPer, IntTempMin, IntTempMax);
+  printGeneral("Montemurlo", timeS, day, weatherID, description, InTemperature, umidityPer, IntTempMin, IntTempMax, windS);
 }
 
 void displayDetails(){
@@ -355,22 +357,28 @@ void displayDetails(){
 
 // =======================================================================================
 // Print Home page with all details
-void printGeneral(String city, String timeS, String day, int weatherID, String description, int temperature, String umidity, int tempMin, int tempMax){
+void printGeneral(String city, String timeS, String day, int weatherID, String description, int temperature, String umidity, int tempMin, int tempMax, String wind){
   Serial.println ("...Displaying Home Page on LCD..." );
 
   tft.fillScreen(BLACK);
 
   tft.setCursor(2,10);
-  tft.setTextColor(WHITE);
+  tft.setTextColor(RED);
   tft.setTextSize(1);
   tft.print(city);
-  tft.setCursor(2,20);
+  tft.print(":");
+  //tft.setCursor(2,20);
   tft.setTextColor(GREEN);
-  tft.setTextSize(2);
+  //tft.setTextSize(2);
   tft.print(description);
+  
   printWeatherIcon(weatherID);
 
   tft.setTextColor(WHITE);
+  tft.setCursor(2,32);
+  tft.print("Wnd:");
+  tft.print(wind);
+  tft.print("m/s");
   tft.setCursor(2,42);
   tft.setTextSize(1);
   tft.print("Min:");
@@ -382,12 +390,12 @@ void printGeneral(String city, String timeS, String day, int weatherID, String d
   tft.print(tempMax);
   tft.print("'");
   
-  tft.setCursor(13,138);
+  tft.setCursor(13,128);
   tft.setTextSize(2);
   tft.setTextColor(BLUE);
   tft.print(temperature);
   tft.print("'C");
-  tft.setCursor(77,138);
+  tft.setCursor(77,128);
   tft.print(umidity);
   tft.print("%");
 
