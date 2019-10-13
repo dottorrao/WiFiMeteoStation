@@ -61,13 +61,19 @@ String    day = "";
 int       weatherID = 0;
 String    location = "";
 String    temperature = "";
+String    tempMin = "";
+String    tempMax = "";
 String    weather = "";
 String    description = "";
 String    idString = "";
 String    umidityPer = "";
 float     Fltemperature = 0;
 int       InTemperature = 0;
+int       IntTempMin = 0;
+int       IntTempMax = 0;
 String    windS = "";
+float     FlTempMin = 0;
+float     FlTempMax = 0;  
 
 // ----------------------------------------------------------------------------------------
 // images used
@@ -279,6 +285,14 @@ void getWeatherData(){ //client function to send/receive GET request data.
   String idStringLOC = root["weather"]["id"];
   String umidityPerLOC = root["main"]["humidity"];
   String windLOC = root["wind"]["speed"];
+  String tempMinLOC = root["main"]["temp_min"];
+  String tempMaxLOC = root["main"]["temp_max"];
+
+  //if the length of description is up than 10 char, truncate to 9 + "."
+  if ( descriptionLOC.length() > 9 ){
+    descriptionLOC = descriptionLOC.substring (0,9);
+    descriptionLOC += ".";
+  }
 
   temperature = temperatureLOC;
   weather = weatherLOC;
@@ -286,6 +300,8 @@ void getWeatherData(){ //client function to send/receive GET request data.
   idString = idStringLOC;
   umidityPer = umidityPerLOC;
   windS = windLOC;
+  tempMin = tempMinLOC;
+  tempMax = tempMaxLOC;
 
   Serial.println ("Temperature: " + String(temperature) );
   Serial.println ("Weather: " + String(weather) );
@@ -299,9 +315,18 @@ void getWeatherData(){ //client function to send/receive GET request data.
     temperature.remove(length-3);
   }
 
+  //adjusting temperature
   Fltemperature = temperature.toFloat();
   Fltemperature = Fltemperature - 273,15;
   InTemperature = round(Fltemperature);
+  
+  FlTempMin = tempMin.toFloat();
+  FlTempMin = FlTempMin - 273,15;
+  IntTempMin = round(FlTempMin);
+  
+  FlTempMax = tempMax.toFloat();
+  FlTempMax = FlTempMax - 273,15;
+  IntTempMax = round(FlTempMax);
   
   weatherID = idString.toInt();
 }
@@ -313,7 +338,7 @@ void getWeatherData(){ //client function to send/receive GET request data.
 
 void displayHomePage(){
   Serial.println ("...Displaying data on LCD..." );
-  printGeneral("Montemurlo", timeS, day, weatherID, description, InTemperature, umidityPer);
+  printGeneral("Montemurlo", timeS, day, weatherID, description, InTemperature, umidityPer, IntTempMin, IntTempMax);
 }
 
 void displayDetails(){
@@ -330,25 +355,39 @@ void displayDetails(){
 
 // =======================================================================================
 // Print Home page with all details
-void printGeneral(String city, String timeS, String day, int weatherID, String description, int temperature, String umidity){
+void printGeneral(String city, String timeS, String day, int weatherID, String description, int temperature, String umidity, int tempMin, int tempMax){
   Serial.println ("...Displaying Home Page on LCD..." );
 
   tft.fillScreen(BLACK);
 
   tft.setCursor(2,10);
-  tft.setTextColor(RED);
+  tft.setTextColor(WHITE);
   tft.setTextSize(1);
   tft.print(city);
   tft.setCursor(2,20);
   tft.setTextColor(GREEN);
+  tft.setTextSize(2);
   tft.print(description);
   printWeatherIcon(weatherID);
-  tft.setCursor(5,120);
+
+  tft.setTextColor(WHITE);
+  tft.setCursor(2,42);
+  tft.setTextSize(1);
+  tft.print("Min:");
+  tft.print(tempMin);
+  tft.print("'");
+  tft.setCursor(2,52);
+  tft.setTextSize(1);
+  tft.print("Max:");
+  tft.print(tempMax);
+  tft.print("'");
+  
+  tft.setCursor(13,138);
   tft.setTextSize(2);
   tft.setTextColor(BLUE);
   tft.print(temperature);
   tft.print("'C");
-  tft.setCursor(85,120);
+  tft.setCursor(77,138);
   tft.print(umidity);
   tft.print("%");
 
