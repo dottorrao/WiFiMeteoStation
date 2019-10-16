@@ -14,6 +14,7 @@
 #include <Adafruit_GFX.h>                     // LCD graphical driver
 #include <WiFiManager.h>                      // https://github.com/tzapu/WiFiManager
 #include <math.h>
+#include <time.h>
 
 // ----------------------------------------------------------------------------------------
 
@@ -56,8 +57,12 @@ String result;
 // ----------------------------------------------------------------------------------------
 // set of variables used into this sketch for different pourpose
 boolean   night = false;
+
 String    timeS = "";
 String    day = "";
+String    OLDtimeS = "";
+String    OLDday = "";
+
 int       weatherID = 0;
 String    location = "";
 String    temperature = "";
@@ -71,9 +76,9 @@ float     Fltemperature = 0;
 int       InTemperature = 0;
 int       IntTempMin = 0;
 int       IntTempMax = 0;
-String    windS = "";
 float     FlTempMin = 0;
-float     FlTempMax = 0;  
+float     FlTempMax = 0; 
+String    windS = "";
 
 // ----------------------------------------------------------------------------------------
 // images used
@@ -193,12 +198,16 @@ void loop() {
     Serial.println ( "Display Weather data " );
     displayHomePage();
   }else{
+    //refreshing date and time from web
+    refreshDate();
+    //displayind date and time on LCD, out of general display function in order to udate date/time in real time.
+    printDateTime ( getDay(), getTime() );
     buttonDetail = digitalRead (buttonDetailPin);
     //Serial.print ( buttonDetail );
     delay(100);
     if ( buttonDetail == 0 ) {
       //Serial.print ( buttonDetail );
-      displayDetails();
+      //displayDetails();
       firstRun = true;
     }
   }   
@@ -207,7 +216,7 @@ void loop() {
 // =======================================================================================
 
 // get current date
-String getDate(){
+String refreshDate(){
   timeClient.update(); 
 }
 
@@ -343,18 +352,6 @@ void displayHomePage(){
   printGeneral("Montemurlo", timeS, day, weatherID, description, InTemperature, umidityPer, IntTempMin, IntTempMax, windS);
 }
 
-void displayDetails(){
-  Serial.println ("...Displaying details on LCD..." );
-  //printWeather("Montemurlo", timeS, day, weatherID, description);
-  delay (5000);
-  printTemperature("Montemurlo", timeS, day, InTemperature);
-  delay (5000);
-  printUmidity("Montemurlo", timeS, day, umidityPer);
-  delay (5000);
-  printWind("Montemurlo", timeS, day, windS);
-  delay (5000);
-}
-
 // =======================================================================================
 // Print Home page with all details
 void printGeneral(String city, String timeS, String day, int weatherID, String description, int temperature, String umidity, int tempMin, int tempMax, String wind){
@@ -373,123 +370,64 @@ void printGeneral(String city, String timeS, String day, int weatherID, String d
   tft.print(description);
   
   printWeatherIcon(weatherID);
-
-  tft.setTextColor(WHITE);
+  
   tft.setCursor(2,32);
-  tft.print("Wnd:");
-  tft.print(wind);
-  tft.print("m/s");
+  tft.setTextSize(1);
+  tft.setTextColor(GREEN);
+  tft.print("Min:");
+  tft.setTextColor(WHITE);
+  tft.print(tempMin);
+  tft.print("'C");
   tft.setCursor(2,42);
   tft.setTextSize(1);
-  tft.print("Min:");
-  tft.print(tempMin);
-  tft.print("'");
+  tft.setTextColor(GREEN);
+  tft.print("Max:");
+  tft.setTextColor(WHITE);
+  tft.print(tempMax);
+  tft.print("'C");
   tft.setCursor(2,52);
   tft.setTextSize(1);
-  tft.print("Max:");
-  tft.print(tempMax);
-  tft.print("'");
+  tft.setTextColor(GREEN);
+  tft.print("Hum:");
+  tft.setTextColor(WHITE);
+  tft.print(umidity);
+  tft.print("%");
+  tft.setCursor(2,62);
+  tft.setTextColor(GREEN);
+  tft.print("Wnd:");
+  tft.setTextColor(WHITE);
+  tft.print(wind);
+  tft.print("ms");
   
   tft.setCursor(13,128);
   tft.setTextSize(2);
   tft.setTextColor(BLUE);
   tft.print(temperature);
   tft.print("'C");
-  tft.setCursor(77,128);
-  tft.print(umidity);
-  tft.print("%");
-
+  //tft.setCursor(77,128);
+  //tft.print(umidity);
+  //tft.print("%");
 }
 
-// =======================================================================================
-// Print Weather with icon
-void printWeather(String city, String timeS, String day, int weatherID, String description) {
-  Serial.println ("...Displaying Weather on LCD..." );
-  tft.fillScreen(BLACK);
-
-  tft.setCursor(2,10);
-  tft.setTextColor(RED);
-  tft.setTextSize(1);
-  tft.print(city);
-  tft.setCursor(2,20);
-  tft.setTextColor(GREEN);
-  tft.print(description);
-
-  printWeatherIcon(weatherID);
-
-  tft.setCursor(1,122);
-  tft.setTextColor(GREEN);
-  tft.setTextSize(2);
-  tft.print(description);
-}
-
-// =======================================================================================
-// Print temperature display
-void printTemperature(String city, String timeS, String day, float temperature){
-  Serial.println ("...Displaying Temperature on LCD..." );
-  tft.fillScreen(BLACK);
-
-  tft.setCursor(2,10);
-  tft.setTextColor(RED);
-  tft.setTextSize(1);
-  tft.print(city);
-  tft.setCursor(2,20);
-  tft.setTextColor(GREEN);
-  tft.print(description);
-
-  drawThermometer();
-
-  tft.setCursor(30,135);
-  tft.setTextColor(GREEN);
-  tft.setTextSize(2);
-  tft.print(temperature);
-  tft.print("'C");
-}
-
-// =======================================================================================
-// Print umidity display
-void printUmidity(String city, String timeS, String day, String umidity){
-  Serial.println ("...Displaying Humidity on LCD..." );
-  tft.fillScreen(BLACK);
-
-  tft.setCursor(2,10);
-  tft.setTextColor(RED);
-  tft.setTextSize(1);
-  tft.print(city);
-  tft.setCursor(2,20);
-  tft.setTextColor(GREEN);
-  tft.print(description);
-
-  drawUmidity();
-
-  tft.setCursor(47,132);
-  tft.setTextColor(GREEN);
-  tft.setTextSize(2);
-  tft.print(umidity);
-  tft.print("%");
-}
-
-// =======================================================================================
-// Print wind display
-void printWind(String city, String timeS, String day, String wind){
-  Serial.println ("...Displaying  Wind on LCD..." );
-  tft.fillScreen(BLACK);
-
-  tft.setCursor(2,10);
-  tft.setTextColor(RED);
-  tft.setTextSize(1);
-  tft.print(city);
-  tft.setCursor(2,20);
-  tft.setTextColor(GREEN);
-  tft.print(description);
-
-  drawWind();
-
-  tft.setCursor(30,132);
-  tft.setTextColor(GREEN);
-  tft.setTextSize(2);
-  tft.print(wind);
-  tft.print("m/s");
+void printDateTime(String day, String timeS){
+  if ( timeS != OLDtimeS ){
+    tft.setTextSize(1);
+    tft.setCursor(77,128);
+    tft.setTextColor(BLACK);
+    tft.print(day);
+    tft.setCursor(77,128);
+    tft.setTextColor(WHITE);
+    tft.print(day); 
+    tft.setCursor(77,138);
+    tft.setTextColor(BLACK);
+    tft.print(OLDtimeS);
+    tft.setCursor(77,138);
+    tft.setTextColor(WHITE);
+    tft.print(timeS);
+    OLDtimeS = timeS;
+    OLDday = day;
+  }
+  delay(100);
 }
 
 // =======================================================================================
@@ -599,23 +537,23 @@ void drawFewClouds(){
 
 void drawTheSun(){
   Serial.println ("...Printing TheSun on LCD");
-  tft.fillCircle(64,80,26,YELLOW);
+  tft.fillCircle(90,80,26,YELLOW);
 }
 
 void drawTheFullMoon(){
   Serial.println ("...Printing FullMoon on LCD");
-  tft.fillCircle(64,80,26,GREY);
+  tft.fillCircle(90,80,26,GREY);
 }
 
 void drawTheMoon(){
   Serial.println ("...Printing TheMoon on LCD");
-  tft.fillCircle(64,80,26,GREY);
-  tft.fillCircle(75,73,26,BLACK);
+  tft.fillCircle(90,80,26,YELLOW);
+  tft.fillCircle(101,73,26,BLACK);
 }
 
 void drawCloud(){
   Serial.println ("...Printing Cloud on LCD");
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
+  tft.drawBitmap(20,35,cloud,128,90,WHITE);
 }
 
 void drawThermometer(){
@@ -634,14 +572,14 @@ void drawWifi(){
 }
 
 void drawCloudWithSun(){
-  tft.fillCircle(73,70,20,YELLOW);  
-  tft.drawBitmap(0,36,cloud,128,90,BLACK);
-  tft.drawBitmap(0,40,cloud,128,90,GREY);
+  tft.fillCircle(90,70,20,YELLOW);  
+  tft.drawBitmap(17,36,cloud,128,90,BLACK);
+  tft.drawBitmap(17,40,cloud,128,90,WHITE);
 }
 
 void drawLightRainWithSunOrMoon(){
   Serial.println ("...Printing RainWithSunOrMoon on LCD");
-  if(night){  
+  if(!night){  
     drawCloudTheMoonAndRain();
   }else{
     drawCloudSunAndRain();
@@ -650,103 +588,103 @@ void drawLightRainWithSunOrMoon(){
 
 void drawLightRain(){
   Serial.println ("...Printing LightRain on LCD");
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
-  tft.fillRoundRect(50, 105, 3, 13, 1, BLUE);
-  tft.fillRoundRect(65, 105, 3, 13, 1, BLUE);
-  tft.fillRoundRect(80, 105, 3, 13, 1, BLUE);
+  tft.drawBitmap(20,35,cloud,128,90,WHITE);
+  tft.fillRoundRect(70, 105, 3, 13, 1, BLUE);
+  tft.fillRoundRect(85, 105, 3, 13, 1, BLUE);
+  tft.fillRoundRect(100, 105, 3, 13, 1, BLUE);
 }
 
 void drawModerateRain(){
   Serial.println ("...Printing ModerateRain on LCD");
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
-  tft.fillRoundRect(50, 105, 3, 15, 1, BLUE);
-  tft.fillRoundRect(57, 102, 3, 15, 1, BLUE);
-  tft.fillRoundRect(65, 105, 3, 15, 1, BLUE);
-  tft.fillRoundRect(72, 102, 3, 15, 1, BLUE);
-  tft.fillRoundRect(80, 105, 3, 15, 1, BLUE);
+  tft.drawBitmap(20,35,cloud,128,90,0xC618);
+  tft.fillRoundRect(70, 105, 3, 15, 1, BLUE);
+  tft.fillRoundRect(77, 102, 3, 15, 1, BLUE);
+  tft.fillRoundRect(85, 105, 3, 15, 1, BLUE);
+  tft.fillRoundRect(92, 102, 3, 15, 1, BLUE);
+  tft.fillRoundRect(100, 105, 3, 15, 1, BLUE);
 }
 
 void drawHeavyRain(){
   Serial.println ("...Printing HeavyRain on LCD");
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
-  tft.fillRoundRect(43, 102, 3, 15, 1, BLUE);
-  tft.fillRoundRect(50, 105, 3, 15, 1, BLUE);
-  tft.fillRoundRect(57, 102, 3, 15, 1, BLUE);
-  tft.fillRoundRect(65, 105, 3, 15, 1, BLUE);
-  tft.fillRoundRect(72, 102, 3, 15, 1, BLUE);
-  tft.fillRoundRect(80, 105, 3, 15, 1, BLUE);
-  tft.fillRoundRect(87, 102, 3, 15, 1, BLUE);
+  tft.drawBitmap(20,35,cloud,128,90,WHITE);
+  tft.fillRoundRect(63, 102, 3, 15, 1, BLUE);
+  tft.fillRoundRect(70, 105, 3, 15, 1, BLUE);
+  tft.fillRoundRect(77, 102, 3, 15, 1, BLUE);
+  tft.fillRoundRect(85, 105, 3, 15, 1, BLUE);
+  tft.fillRoundRect(92, 102, 3, 15, 1, BLUE);
+  tft.fillRoundRect(100, 105, 3, 15, 1, BLUE);
+  tft.fillRoundRect(107, 102, 3, 15, 1, BLUE);
 }
 
 void drawThunderstorm(){
   Serial.println ("...Printing Thunderstorm on LCD");
-  tft.drawBitmap(0,40,thunder,128,90,YELLOW);
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
-  tft.fillRoundRect(48, 102, 3, 15, 1, BLUE);
-  tft.fillRoundRect(55, 102, 3, 15, 1, BLUE);
-  tft.fillRoundRect(74, 102, 3, 15, 1, BLUE);
-  tft.fillRoundRect(82, 102, 3, 15, 1, BLUE);
+  tft.drawBitmap(20,40,thunder,128,90,YELLOW);
+  tft.drawBitmap(20,35,cloud,128,90,WHITE);
+  tft.fillRoundRect(68, 102, 3, 15, 1, BLUE);
+  tft.fillRoundRect(75, 102, 3, 15, 1, BLUE);
+  tft.fillRoundRect(94, 102, 3, 15, 1, BLUE);
+  tft.fillRoundRect(102, 102, 3, 15, 1, BLUE);
 }
 
 void drawLightSnowfall(){
   Serial.println ("...Printing LightSnowfall on LCD");
-  tft.drawBitmap(0,30,cloud,128,90,GREY);
-  tft.fillCircle(50, 100, 3, GREY);
-  tft.fillCircle(65, 103, 3, GREY);
-  tft.fillCircle(82, 100, 3, GREY);
+  tft.drawBitmap(20,30,cloud,128,90,WHITE);
+  tft.fillCircle(70, 100, 3, GREY);
+  tft.fillCircle(85, 103, 3, GREY);
+  tft.fillCircle(102, 100, 3, GREY);
 }
 
 void drawModerateSnowfall(){
   Serial.println ("...Printing ModerateSnowfall on LCD");
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
-  tft.fillCircle(50, 105, 3, GREY);
-  tft.fillCircle(50, 115, 3, GREY);
-  tft.fillCircle(65, 108, 3, GREY);
-  tft.fillCircle(65, 118, 3, GREY);
-  tft.fillCircle(82, 105, 3, GREY);
-  tft.fillCircle(82, 115, 3, GREY);
+  tft.drawBitmap(20,35,cloud,128,90,WHITE);
+  tft.fillCircle(70, 105, 3, GREY);
+  tft.fillCircle(75, 115, 3, GREY);
+  tft.fillCircle(85, 108, 3, GREY);
+  tft.fillCircle(90, 118, 3, GREY);
+  tft.fillCircle(102, 105, 3, GREY);
+  tft.fillCircle(107, 115, 3, GREY);
 }
 
 void drawHeavySnowfall(){
   Serial.println ("...Printing HeavySnowfall on LCD");
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
-  tft.fillCircle(40, 105, 3, GREY);
-  tft.fillCircle(52, 105, 3, GREY);
-  tft.fillCircle(52, 115, 3, GREY);
-  tft.fillCircle(65, 108, 3, GREY);
-  tft.fillCircle(65, 118, 3, GREY);
-  tft.fillCircle(80, 105, 3, GREY);
-  tft.fillCircle(80, 115, 3, GREY);
-  tft.fillCircle(92, 105, 3, GREY);
+  tft.drawBitmap(20,35,cloud,128,90,WHITE);
+  tft.fillCircle(60, 105, 3, GREY);
+  tft.fillCircle(72, 105, 3, GREY);
+  tft.fillCircle(77, 115, 3, GREY);
+  tft.fillCircle(85, 108, 3, GREY);
+  tft.fillCircle(90, 118, 3, GREY);
+  tft.fillCircle(100, 105, 3, GREY);
+  tft.fillCircle(105, 115, 3, GREY);
+  tft.fillCircle(112, 105, 3, GREY);
 }
 
 void drawCloudSunAndRain(){
   Serial.println ("...Printing CloudSunAndRain on LCD");
-  tft.fillCircle(73,70,20,YELLOW);
-  tft.drawBitmap(0,32,cloud,128,90,BLACK);
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
-  tft.fillRoundRect(50, 105, 3, 13, 1, BLUE);
-  tft.fillRoundRect(65, 105, 3, 13, 1, BLUE);
-  tft.fillRoundRect(80, 105, 3, 13, 1, BLUE);
+  tft.fillCircle(93,70,20,YELLOW);
+  tft.drawBitmap(20,32,cloud,128,90,BLACK);
+  tft.drawBitmap(20,35,cloud,128,90,WHITE);
+  tft.fillRoundRect(70, 105, 3, 13, 1, BLUE);
+  tft.fillRoundRect(85, 105, 3, 13, 1, BLUE);
+  tft.fillRoundRect(100, 105, 3, 13, 1, BLUE);
 }
 
 void drawCloudAndTheMoon(){
   Serial.println ("...Printing CloudAndTheMoon on LCD");
-  tft.fillCircle(94,60,18,GREY);
-  tft.fillCircle(105,53,18,BLACK);
-  tft.drawBitmap(0,32,cloud,128,90,BLACK);
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
+  tft.fillCircle(110,60,18,YELLOW);
+  tft.fillCircle(121,53,18,BLACK);
+  tft.drawBitmap(16,32,cloud,128,90,BLACK);
+  tft.drawBitmap(16,35,cloud,128,90,WHITE);
 }
 
 void drawCloudTheMoonAndRain(){
   Serial.println ("...Printing CloudTheMoonAndRain on LCD");
-  tft.fillCircle(94,60,18,GREY);
-  tft.fillCircle(105,53,18,BLACK);
-  tft.drawBitmap(0,32,cloud,128,90,BLACK);
-  tft.drawBitmap(0,35,cloud,128,90,GREY);
-  tft.fillRoundRect(50, 105, 3, 11, 1, BLUE);
+  tft.fillCircle(110,60,18,YELLOW);
+  tft.fillCircle(121,53,18,BLACK);
+  tft.drawBitmap(16,32,cloud,128,90,BLACK);
+  tft.drawBitmap(16,35,cloud,128,90,WHITE);
   tft.fillRoundRect(65, 105, 3, 11, 1, BLUE);
   tft.fillRoundRect(80, 105, 3, 11, 1, BLUE);
+  tft.fillRoundRect(95, 105, 3, 11, 1, BLUE);
 }
 
 void drawWind(){  
@@ -756,11 +694,11 @@ void drawWind(){
 
 void drawFog()  {
   Serial.println ("...Printing Fog on LCD");
-  tft.fillRoundRect(45, 60, 40, 4, 1, GREY);
-  tft.fillRoundRect(40, 70, 50, 4, 1, GREY);
-  tft.fillRoundRect(35, 80, 60, 4, 1, GREY);
-  tft.fillRoundRect(40, 90, 50, 4, 1, GREY);
-  tft.fillRoundRect(45, 100, 40, 4, 1, GREY);
+  tft.fillRoundRect(65, 60, 40, 4, 1, GREY);
+  tft.fillRoundRect(60, 70, 50, 4, 1, GREY);
+  tft.fillRoundRect(55, 80, 60, 4, 1, GREY);
+  tft.fillRoundRect(60, 90, 50, 4, 1, GREY);
+  tft.fillRoundRect(65, 100, 40, 4, 1, GREY);
 }
 
 void clearIcon(){
