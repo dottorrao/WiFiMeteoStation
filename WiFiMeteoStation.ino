@@ -43,7 +43,7 @@ String CityID = "6541554"; // Montemurlo, ITA
 // @TODO: Make Timezone configurable
 int TimeZone = 1;// GMT +1
 // @TODO: Make utcOffsetInSeconds configurable
-const long utcOffsetInSeconds = 7200;
+const long utcOffsetInSeconds = 3600;
 char daysOfTheWeek[7][12] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 
 // Define NTP Client to get time and date
@@ -103,9 +103,13 @@ void saveConfigCallback () {
   shouldSaveConfig = true;
 }
 
-//BUTTON
+//BUTTON RELOAD
 const int buttonDetailPin = 4; 
 int buttonDetail = 0;
+
+//PIN FOR SWITCH
+const int buttonSwitchScreen = 2; 
+int switchScreen = 0;
 
 //REFRESH DATA
 boolean firstRun = true;
@@ -116,6 +120,9 @@ const unsigned long period = 30 * 60 * 1000; // mm * ss * millisecond
 // WiFiManager
 // Local intialization. Once its business is done, there is no need to keep it around
 WiFiManager wifiManager;
+
+// Variable to store the HTTP request
+String header;
 
 // =======================================================================================
 // S E T U P
@@ -130,6 +137,7 @@ void setup() {
   
   //Button reset init
   pinMode(buttonDetailPin, INPUT); //_PULLUP);
+  pinMode(buttonSwitchScreen, INPUT);
   
   // LCD: initialize a ST7735S chip, green tab
   tft.initR(INITR_GREENTAB);    
@@ -172,8 +180,13 @@ void setup() {
   // if you get here you have connected to the WiFi
   // Serial.println("Connected.");
   
+  IPAddress ip = WiFi.localIP();
+  Serial.print(">>");
+  Serial.println(ip);
+    
   timeClient.begin();
   delay (2000);
+
 }
 
 // =======================================================================================
@@ -181,36 +194,54 @@ void setup() {
 // =======================================================================================
 void loop() {
 
-  currentMillis = millis();
-  if ( (currentMillis - startMillis >= period) or (firstRun) ) {
-    firstRun = false;
-    startMillis = currentMillis;
-    //get current time
-    timeS = getTime();
-    Serial.println ( "Getting current time: " + String(timeS) );
-    //get current day
-    day = getDay();
-    Serial.println ( "Getting current day: " + String (day) );
-    //to define if we are in night or day (to display moon or sun)
-    nightOrDay (timeS);
-    Serial.println ( "Getting data from openweathermap.org" );
-    getWeatherData();
-    Serial.println ( "Display Weather data " );
-    displayHomePage();
-  }else{
-    //refreshing date and time from web
-    refreshDate();
-    //displayind date and time on LCD, out of general display function in order to udate date/time in real time.
-    printDateTime ( getDay(), getTime() );
-    buttonDetail = digitalRead (buttonDetailPin);
-    //Serial.print ( buttonDetail );
-    delay(100);
-    if ( buttonDetail == 0 ) {
+  
+  //WiFiClient client = server.available();   // Listen for incoming clients
+  //if (client) { 
+  //  Serial.println ( "Client connected!" );
+  //}
+
+  switchScreen = digitalRead (buttonSwitchScreen); 
+  Serial.print ( switchScreen );
+  
+  if ( switchScreen == 1 ) {
+    currentMillis = millis();
+    if ( (currentMillis - startMillis >= period) or (firstRun) ) {
+      firstRun = false;
+      startMillis = currentMillis;
+      //get current time
+      timeS = getTime();
+      Serial.println ( "Getting current time: " + String(timeS) );
+      //get current day
+      day = getDay();
+      Serial.println ( "Getting current day: " + String (day) );
+      //to define if we are in night or day (to display moon or sun)
+      nightOrDay (timeS);
+      Serial.println ( "Getting data from openweathermap.org" );
+      getWeatherData();
+      Serial.println ( "Display Weather data " );
+      displayHomePage();
+      refreshDate();
+    } else {
+      //refreshing date and time from web
+      refreshDate();
+      //displayind date and time on LCD, out of general display function in order to udate date/time in real time.
+      printDateTime ( getDay(), getTime() );
+      /*
+      buttonDetail = digitalRead (buttonDetailPin);   
       //Serial.print ( buttonDetail );
-      //displayDetails();
-      firstRun = true;
+      delay(100);
+      if ( buttonDetail == 0 ) {
+        //Serial.print ( buttonDetail );
+        //displayDetails();
+        firstRun = true;
+      }
+      */  
     }
-  }   
+  } else {
+    tft.fillScreen(BLACK);
+    firstRun = true;
+  }
+  
 }
 
 // =======================================================================================
@@ -579,7 +610,7 @@ void drawCloudWithSun(){
 
 void drawLightRainWithSunOrMoon(){
   Serial.println ("...Printing RainWithSunOrMoon on LCD");
-  if(!night){  
+  if(night){  
     drawCloudTheMoonAndRain();
   }else{
     drawCloudSunAndRain();
