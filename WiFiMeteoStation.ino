@@ -1,4 +1,4 @@
-
+  
 // To develop => @TODO placeholder
 
 // ----------------------------------------------------------------------------------------
@@ -103,16 +103,9 @@ void saveConfigCallback () {
   shouldSaveConfig = true;
 }
 
-//BUTTON RELOAD
-const int buttonDetailPin = 4; 
-int buttonDetail = 0;
-
-//PIN FOR SWITCH
-const int buttonSwitchScreen = 2; 
-int switchScreen = 0;
-
 //REFRESH DATA
 boolean firstRun = true;
+boolean comingFromSwitch = false;
 unsigned long startMillis;
 unsigned long currentMillis;
 const unsigned long period = 30 * 60 * 1000; // mm * ss * millisecond
@@ -134,10 +127,6 @@ void setup() {
 
   //start of couting of millisecond from start of sketch
   startMillis = millis();  //initial start time
-  
-  //Button reset init
-  pinMode(buttonDetailPin, INPUT); //_PULLUP);
-  pinMode(buttonSwitchScreen, INPUT);
   
   // LCD: initialize a ST7735S chip, green tab
   tft.initR(INITR_GREENTAB);    
@@ -194,20 +183,8 @@ void setup() {
 // =======================================================================================
 void loop() {
 
-  
-  //WiFiClient client = server.available();   // Listen for incoming clients
-  //if (client) { 
-  //  Serial.println ( "Client connected!" );
-  //}
-
-  switchScreen = digitalRead (buttonSwitchScreen); 
-  Serial.print ( switchScreen );
-  
-  if ( switchScreen == 1 ) {
-    currentMillis = millis();
+  currentMillis = millis(); 
     if ( (currentMillis - startMillis >= period) or (firstRun) ) {
-      firstRun = false;
-      startMillis = currentMillis;
       //get current time
       timeS = getTime();
       Serial.println ( "Getting current time: " + String(timeS) );
@@ -217,31 +194,21 @@ void loop() {
       //to define if we are in night or day (to display moon or sun)
       nightOrDay (timeS);
       Serial.println ( "Getting data from openweathermap.org" );
-      getWeatherData();
+      if (comingFromSwitch or firstRun) { 
+        getWeatherData();
+        comingFromSwitch = false;
+        firstRun = false;
+      }
       Serial.println ( "Display Weather data " );
       displayHomePage();
       refreshDate();
+      printDateTime ( getDay(), getTime() );
     } else {
       //refreshing date and time from web
       refreshDate();
       //displayind date and time on LCD, out of general display function in order to udate date/time in real time.
       printDateTime ( getDay(), getTime() );
-      /*
-      buttonDetail = digitalRead (buttonDetailPin);   
-      //Serial.print ( buttonDetail );
-      delay(100);
-      if ( buttonDetail == 0 ) {
-        //Serial.print ( buttonDetail );
-        //displayDetails();
-        firstRun = true;
-      }
-      */  
     }
-  } else {
-    tft.fillScreen(BLACK);
-    firstRun = true;
-  }
-  
 }
 
 // =======================================================================================
@@ -293,13 +260,15 @@ void getWeatherData(){ //client function to send/receive GET request data.
   while (client.connected() || client.available()) { //connected or data available
     char c = client.read(); //gets byte from ethernet buffer
     result = result+c;
+    ESP.wdtFeed();
   }
 
   // replacing character '['
   client.stop(); //stop client
   result.replace('[', ' ');
   result.replace(']', ' ');
-  
+
+  ESP.wdtFeed();                                                                                                                                                                                                                                                                                                                                        
   Serial.println("Data collected from web: ");
   Serial.println(result);
 
