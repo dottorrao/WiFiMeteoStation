@@ -15,6 +15,7 @@
 #include <WiFiManager.h>                      // https://github.com/tzapu/WiFiManager
 #include <math.h>
 #include <time.h>
+#include <ESP8266HTTPClient.h>
 
 // ----------------------------------------------------------------------------------------
 
@@ -80,6 +81,16 @@ float     FlTempMin = 0;
 float     FlTempMax = 0; 
 String    windS = "";
 
+String    for0003="";
+String    for0306="";
+String    for0609="";
+String    for0912="";
+String    for1215="";
+String    for1518="";
+String    for1821="";
+String    for2100="";
+String    forDate="";
+
 // ----------------------------------------------------------------------------------------
 // images used
 extern  unsigned char  cloud[]; 
@@ -105,6 +116,7 @@ void saveConfigCallback () {
 
 //REFRESH DATA
 boolean firstRun = true;
+boolean firstRunForecast = true;
 boolean comingFromSwitch = false;
 unsigned long startMillis;
 unsigned long currentMillis;
@@ -117,11 +129,17 @@ WiFiManager wifiManager;
 // Variable to store the HTTP request
 String header;
 
+//pit to switch the screen
+int switchScreenPIn = 2;
+int valSwitchScreenPIn= 0;      
+
 // =======================================================================================
 // S E T U P
 // =======================================================================================
 void setup() {
-  
+    
+  //switchScreenPIn inizialization
+  pinMode(switchScreenPIn, INPUT); 
   
   Serial.begin(9600);
 
@@ -174,8 +192,6 @@ void setup() {
   Serial.println(ip);
     
   timeClient.begin();
-  delay (2000);
-
 }
 
 // =======================================================================================
@@ -183,8 +199,16 @@ void setup() {
 // =======================================================================================
 void loop() {
 
-  currentMillis = millis(); 
+  valSwitchScreenPIn = digitalRead(switchScreenPIn);
+  
+  // switch is 1, display screen 1 with current weather
+  if (valSwitchScreenPIn == 1) {
+    if (!firstRunForecast) {
+      firstRunForecast = true;
+    }
+    currentMillis = millis(); 
     if ( (currentMillis - startMillis >= period) or (firstRun) ) {
+      firstRun = false;
       //get current time
       timeS = getTime();
       Serial.println ( "Getting current time: " + String(timeS) );
@@ -194,11 +218,7 @@ void loop() {
       //to define if we are in night or day (to display moon or sun)
       nightOrDay (timeS);
       Serial.println ( "Getting data from openweathermap.org" );
-      if (comingFromSwitch or firstRun) { 
-        getWeatherData();
-        comingFromSwitch = false;
-        firstRun = false;
-      }
+      getWeatherData();
       Serial.println ( "Display Weather data " );
       displayHomePage();
       refreshDate();
@@ -209,6 +229,35 @@ void loop() {
       //displayind date and time on LCD, out of general display function in order to udate date/time in real time.
       printDateTime ( getDay(), getTime() );
     }
+  }else{
+    // switch is 0, display screen 2 with forecast
+    if (!firstRun) {
+      firstRun = true;
+    }
+    currentMillis = millis(); 
+    if ( (currentMillis - startMillis >= period) or (firstRunForecast) ) {
+      firstRunForecast = false;
+      //get current time
+      timeS = getTime();
+      Serial.println ( "Getting current time: " + String(timeS) );
+      //get current day
+      day = getDay();
+      Serial.println ( "Getting current day: " + String (day) );
+      //to define if we are in night or day (to display moon or sun)
+      nightOrDay (timeS);
+      Serial.println ( "Getting data from openweathermap.org" );
+      getForecastWeatherData();
+      Serial.println ( "Display Forecast data " );
+      displayForecastData();
+      refreshDate();
+      printDateTime ( getDay(), getTime() );
+    }else{
+      //refreshing date and time from web
+      refreshDate();
+      //displayind date and time on LCD, out of general display function in order to udate date/time in real time.
+      printDateTime ( getDay(), getTime() );
+    }
+  }
 }
 
 // =======================================================================================
@@ -241,105 +290,116 @@ String getDay(){
 // get Weather data from openweathermap.org
 // sent request for data
 void getWeatherData(){ //client function to send/receive GET request data. 
-  if (client.connect(servername, 80)) {  //starts client connection, checks for connection
-    Serial.println ( "Getting Weather from openweathermap.org" );
-    client.println("GET /data/2.5/weather?id="+CityID+"&APPID="+APIKEY);
-    client.println("Host: api.openweathermap.org");
-    client.println("User-Agent: ArduinoWiFi/1.1");
-    client.println("Connection: close");
-    client.println();
-    Serial.println ( "Weather data correcly get from openweathermap.org" );
+  
+  //ESP.wdtDisable(); //disabling watchdog
+
+  Serial.println ( "Getting Weather from openweathermap.org" );
+  HTTPClient http; //Object of class HTTPClient
+  http.begin("http://api.openweathermap.org/data/2.5/weather?id="+CityID+"&APPID="+APIKEY);
+  int httpCode = http.GET();
+  if (httpCode > 0) {
+    
+    const size_t bufferSize = JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(8) + 370;
+    DynamicJsonBuffer jsonBuffer(bufferSize);
+    JsonObject& root = jsonBuffer.parseObject(http.getString());
+    JsonObject& weatherJ = root["weather"][0];
+    String temperatureLOC = root["main"]["temp"];
+    String weatherLOC = weatherJ["main"];   
+    String descriptionLOC = weatherJ ["description"];
+    String idStringLOC = weatherJ["id"];
+    String umidityPerLOC = root["main"]["humidity"];
+    String windLOC = root["wind"]["speed"];
+    String tempMinLOC = root["main"]["temp_min"];
+    String tempMaxLOC = root["main"]["temp_max"];
+   
+    //if the length of description is up than 10 char, truncate to 9 + "."
+    if ( descriptionLOC.length() > 9 ){
+      descriptionLOC = descriptionLOC.substring (0,9);
+      descriptionLOC += ".";
+    }
+        
+    temperature = temperatureLOC;
+    weather = weatherLOC;
+    description = descriptionLOC;
+    idString = idStringLOC;
+    umidityPer = umidityPerLOC;
+    windS = windLOC;
+    tempMin = tempMinLOC;
+    tempMax = tempMaxLOC;
+    
+    Serial.println ("Temperature: " + String(temperature) );
+    Serial.println ("Weather: " + String(weather) );
+    Serial.println ("Description: " + String(description) );
+    Serial.println ("idString: " + String(idString) );
+    Serial.println ("Umdity: " + String(umidityPer) );
+    Serial.println ("Wind: " + String(windS) );
+    Serial.println ("Temp Min: " + String(tempMin) );
+    Serial.println ("Temp Max: " + String(tempMax) );
+
+    int length = temperature.length();
+    if(length==5){
+      temperature.remove(length-3);
+    }
+
+    //adjusting temperature
+    Fltemperature = temperature.toFloat();
+    Fltemperature = Fltemperature - 273,15;
+    InTemperature = round(Fltemperature);
+  
+    FlTempMin = tempMin.toFloat();
+    FlTempMin = FlTempMin - 273,15;
+    IntTempMin = round(FlTempMin);
+  
+    FlTempMax = tempMax.toFloat();
+    FlTempMax = FlTempMax - 273,15;
+    IntTempMax = round(FlTempMax);
+  
+    weatherID = idString.toInt();
+  }
+  http.end();
+  //ESP.wdtEnable(1000); //enabling watchdog
+  
+}
+
+// =======================================================================================
+// get forecast data from openweathermap.org
+// sent request for data
+
+void getForecastWeatherData(){
+  ESP.wdtDisable(); //disabling watchdog
+  Serial.println ( "Getting Weather from openweathermap.org" );
+  HTTPClient http; //Object of class HTTPClient
+  http.begin("http://api.openweathermap.org/data/2.5/forecast?id="+CityID+"&APPID="+APIKEY+"&cnt=16");
+  int httpCode = http.GET();
+  if (httpCode > 0) { 
+    const size_t bufferSize = JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(8) + 370;
+    DynamicJsonBuffer jsonBuffer(bufferSize);
+    JsonObject& root = jsonBuffer.parseObject(http.getString());
+
+    String for0003LOC = root["list"][0]["weather"][0]["main"];
+    for0003 = for0003LOC;
+    String for0306LOC = root["list"][1]["weather"][0]["main"];
+    for0306 = for0306LOC;
+    String for0609LOC = root["list"][2]["weather"][0]["main"];
+    for0609 = for0609LOC;
+    String for0912LOC = root["list"][3]["weather"][0]["main"];
+    for0912 = for0912LOC;
+    String for1215LOC = root["list"][4]["weather"][0]["main"];
+    for1215 = for1215LOC;
+    String for1518LOC = root["list"][5]["weather"][0]["main"];
+    for1518 = for1518LOC;
+    String for1821LOC = root["list"][6]["weather"][0]["main"];
+    for1821 = for1821LOC;
+    String for2100LOC = root["list"][7]["weather"][0]["main"];
+    for2100 = for1821LOC;
+
+    String forDateLOC = root["list"][0]["dt_txt"];
+    forDate = forDateLOC;
+    
   } else {
-    Serial.println("connection failed"); //error message if no client connect
-    Serial.println();
+    Serial.print ( "Error on geting forecast data: " + String(httpCode) );
   }
-
-  // reading sent data
-  while(client.connected() && !client.available()) delay(1); //waits for data
-  Serial.println("Waiting for data");
-  while (client.connected() || client.available()) { //connected or data available
-    char c = client.read(); //gets byte from ethernet buffer
-    result = result+c;
-    ESP.wdtFeed();
-  }
-
-  // replacing character '['
-  client.stop(); //stop client
-  result.replace('[', ' ');
-  result.replace(']', ' ');
-
-  ESP.wdtFeed();                                                                                                                                                                                                                                                                                                                                        
-  Serial.println("Data collected from web: ");
-  Serial.println(result);
-
-  // format received data into a jsonArray.
-  // to make this code working it has been becessary to install version 
-  
-  Serial.println( "Formatting data to json format..." );
-  char jsonArray [result.length()+1];
-  result.toCharArray(jsonArray,sizeof(jsonArray));
-  jsonArray[result.length() + 1] = '\0';
-  StaticJsonBuffer<1024> json_buf;
-  JsonObject &root = json_buf.parseObject(jsonArray);
-  if (!root.success()){
-    Serial.println("parseObject() failed");
-  }
-
-
-  Serial.println("Getting data from JSON");
-  //TODO : try to understand why this double assignement is necessary
-  String temperatureLOC = root["main"]["temp"];
-  String weatherLOC = root["weather"]["main"];
-  String descriptionLOC = root["weather"]["description"];
-  String idStringLOC = root["weather"]["id"];
-  String umidityPerLOC = root["main"]["humidity"];
-  String windLOC = root["wind"]["speed"];
-  String tempMinLOC = root["main"]["temp_min"];
-  String tempMaxLOC = root["main"]["temp_max"];
-
-  //if the length of description is up than 10 char, truncate to 9 + "."
-  if ( descriptionLOC.length() > 9 ){
-    descriptionLOC = descriptionLOC.substring (0,9);
-    descriptionLOC += ".";
-  }
-
-  temperature = temperatureLOC;
-  weather = weatherLOC;
-  description = descriptionLOC;
-  idString = idStringLOC;
-  umidityPer = umidityPerLOC;
-  windS = windLOC;
-  tempMin = tempMinLOC;
-  tempMax = tempMaxLOC;
-
-  Serial.println ("Temperature: " + String(temperature) );
-  Serial.println ("Weather: " + String(weather) );
-  Serial.println ("Description: " + String(description) );
-  Serial.println ("idString: " + String(idString) );
-  Serial.println ("Umdity: " + String(umidityPer) );
-  Serial.println ("Wind: " + String(windS) );
-  Serial.println ("Temp Min: " + String(tempMin) );
-  Serial.println ("Temp Max: " + String(tempMax) );
-
-  int length = temperature.length();
-  if(length==5){
-    temperature.remove(length-3);
-  }
-
-  //adjusting temperature
-  Fltemperature = temperature.toFloat();
-  Fltemperature = Fltemperature - 273,15;
-  InTemperature = round(Fltemperature);
-  
-  FlTempMin = tempMin.toFloat();
-  FlTempMin = FlTempMin - 273,15;
-  IntTempMin = round(FlTempMin);
-  
-  FlTempMax = tempMax.toFloat();
-  FlTempMax = FlTempMax - 273,15;
-  IntTempMax = round(FlTempMax);
-  
-  weatherID = idString.toInt();
+  ESP.wdtEnable(1000); //enabling watchdog
 }
 
 // =======================================================================================
@@ -348,17 +408,20 @@ void getWeatherData(){ //client function to send/receive GET request data.
 //Une loop every 60 seconds
 
 void displayHomePage(){
-  Serial.println ("...Displaying data on LCD..." );
+  Serial.println ("...Displaying weather data on LCD..." );
   printGeneral("Montemurlo", timeS, day, weatherID, description, InTemperature, umidityPer, IntTempMin, IntTempMax, windS);
+}
+
+void displayForecastData(){
+  Serial.println ("...Displaying forecaste data on LCD..." );
+  printForecast();
 }
 
 // =======================================================================================
 // Print Home page with all details
 void printGeneral(String city, String timeS, String day, int weatherID, String description, int temperature, String umidity, int tempMin, int tempMax, String wind){
   Serial.println ("...Displaying Home Page on LCD..." );
-
   tft.fillScreen(BLACK);
-
   tft.setCursor(2,10);
   tft.setTextColor(RED);
   tft.setTextSize(1);
@@ -368,11 +431,8 @@ void printGeneral(String city, String timeS, String day, int weatherID, String d
   tft.setTextColor(GREEN);
   //tft.setTextSize(2);
   tft.print(description);
-  
   printWeatherIcon(weatherID);
-  
   tft.setCursor(2,32);
-  tft.setTextSize(1);
   tft.setTextColor(GREEN);
   tft.print("Min:");
   tft.setTextColor(WHITE);
@@ -398,7 +458,6 @@ void printGeneral(String city, String timeS, String day, int weatherID, String d
   tft.setTextColor(WHITE);
   tft.print(wind);
   tft.print("ms");
-  
   tft.setCursor(13,128);
   tft.setTextSize(2);
   tft.setTextColor(BLUE);
@@ -407,6 +466,37 @@ void printGeneral(String city, String timeS, String day, int weatherID, String d
   //tft.setCursor(77,128);
   //tft.print(umidity);
   //tft.print("%");
+}
+
+void printForecast(){
+  Serial.println ("...Displaying Forecast Page on LCD..." );
+  tft.fillScreen(BLACK);
+  tft.setCursor(2,10);
+  tft.setTextColor(RED);
+  tft.setTextSize(1);
+  tft.print("Montemurlo");
+  tft.print(":");
+  tft.setTextColor(GREEN);
+  tft.print("Forecast");
+  tft.setCursor(2,30);
+  tft.print(forDate);
+  tft.setCursor(2,50);
+  tft.setTextSize(1);
+  tft.print("00-03: " + for0003);
+  tft.setCursor(2,60);
+  tft.print("03-06: " + for0306);
+  tft.setCursor(2,70);
+  tft.print("06-09: " + for0609);
+  tft.setCursor(2,80);
+  tft.print("09-12: " + for0912);
+  tft.setCursor(2,90);
+  tft.print("12-15: " + for1215);
+  tft.setCursor(2,100);
+  tft.print("15-18: " + for1518);
+  tft.setCursor(2,110);
+  tft.print("18-21: " + for1821);
+    tft.setCursor(2,120);
+  tft.print("21-00: " + for2100);
 }
 
 void printDateTime(String day, String timeS){
