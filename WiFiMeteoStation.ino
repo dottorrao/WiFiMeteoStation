@@ -40,7 +40,7 @@ char *password = APPSK;
 // ----------------------------------------------------------------------------------------
 
 // APIKEY is a passtoken used to identify the request from data to "pool.ntp.org
-String APIKEY = "a846fde251b5325d05cf645176fb2a3d"; // API Key 
+String APIKEY = "<APIKEYHERE>"; // API Key 
 // @TODO: Make CityID configurable
 String CityID = "6541554"; // Montemurlo, ITA
 // @TODO: Make Timezone configurable
