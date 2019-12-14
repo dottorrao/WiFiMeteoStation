@@ -45,7 +45,7 @@ String CityID = "6541554"; // Montemurlo, ITA
 int TimeZone = 1;// GMT +1
 // @TODO: Make utcOffsetInSeconds configurable
 const long utcOffsetInSeconds = 3600;
-char daysOfTheWeek[7][12] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+char daysOfTheWeek[7][12] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}; 
 
 // Define NTP Client to get time and date
 WiFiUDP ntpUDP;
