@@ -12,7 +12,7 @@
 #include <ArduinoJson.h>                      // Arduino Json to parse reauest into JSON object. Installed version 5.13, last version is not compatible.
 #include <Adafruit_ST7735.h>                  // LCD driver
 #include <Adafruit_GFX.h>                     // LCD graphical driver
-#include <WiFiManager.h>                      // https://github.com/tzapu/WiFiManager 
+#include <WiFiManager.h>                      // https://github.com/tzapu/WiFiManager
 #include <math.h>
 #include <time.h>
 #include <ESP8266HTTPClient.h>
